@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import validator from "validator";
 import { fetchSuggestedEmails, submitAddUsersByEmail } from "./api";
 import type { AddUsersByEmailCallbacks } from "./types";
 import EmailInputField from "./components/EmailInputField";
 import ChipsPopover from "./components/ChipsPopover";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CHIP_WIDTH_BASE = 24;
 const CHIP_WIDTH_PER_CHAR = 7;
 const INPUT_PADDING = 20;
@@ -147,7 +148,8 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
   const addEmail = useCallback((email: string) => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
-    if (!EMAIL_REGEX.test(trimmed)) return;
+    //if (!EMAIL_REGEX.test(trimmed)) return;
+    if (!validator.isEmail(trimmed)) return;
     const existingSet = new Set(existingEmails.map((e) => e.trim().toLowerCase()));
     if (existingSet.has(trimmed)) {
       showDuplicateMessage("This email is already in the list.");
@@ -198,7 +200,8 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
     const existingSet = new Set(existingEmails.map((e) => e.trim().toLowerCase()));
     let emails = chips.map((c) => c.email);
     const trimmed = inputValue.trim().toLowerCase();
-    if (trimmed && EMAIL_REGEX.test(trimmed)) emails = [...emails, trimmed];
+    //if (trimmed && EMAIL_REGEX.test(trimmed)) emails = [...emails, trimmed];
+    if (trimmed && validator.isEmail(trimmed)) emails = [...emails, trimmed];
     const originalCount = emails.length;
     const seen = new Set<string>();
     emails = emails.filter((e) => {
