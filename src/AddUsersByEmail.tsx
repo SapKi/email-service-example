@@ -62,8 +62,19 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const duplicateMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showDuplicateMessage = useCallback((message: string) => {
+    if (duplicateMessageTimeoutRef.current) clearTimeout(duplicateMessageTimeoutRef.current);
+    setDuplicateMessage(message);
+    duplicateMessageTimeoutRef.current = setTimeout(() => {
+      setDuplicateMessage(null);
+      duplicateMessageTimeoutRef.current = null;
+    }, 5000);
+  }, []);
 
   const visibleCount = getVisibleCount(chips, containerWidth);
   const visibleChips = chips.slice(0, visibleCount);
@@ -78,6 +89,12 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
     const ro = new ResizeObserver(updateWidth);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (duplicateMessageTimeoutRef.current) clearTimeout(duplicateMessageTimeoutRef.current);
+    };
   }, []);
 
   const schedulePopoverClose = useCallback(() => {
@@ -131,14 +148,22 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
     if (!EMAIL_REGEX.test(trimmed)) return;
+    const existingSet = new Set(existingEmails.map((e) => e.trim().toLowerCase()));
+    if (existingSet.has(trimmed)) {
+      showDuplicateMessage("This email is already in the list.");
+      return;
+    }
     setChips((prev) => {
-      if (prev.some((c) => c.email === trimmed)) return prev;
+      if (prev.some((c) => c.email === trimmed)) {
+        showDuplicateMessage("This email is already in the list.");
+        return prev;
+      }
       return [...prev, { id: generateId(), email: trimmed }];
     });
     setInputValue("");
     setSuggestions((s) => s.filter((e) => e !== trimmed));
     setShowSuggestions(false);
-  }, []);
+  }, [existingEmails, showDuplicateMessage]);
 
   const removeChip = useCallback((id: string) => {
     setChips((prev) => prev.filter((c) => c.id !== id));
@@ -170,26 +195,51 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
   );
 
   const handleSubmit = useCallback(async () => {
-    const emails = chips.map((c) => c.email);
+    const existingSet = new Set(existingEmails.map((e) => e.trim().toLowerCase()));
+    let emails = chips.map((c) => c.email);
     const trimmed = inputValue.trim().toLowerCase();
-    if (trimmed && EMAIL_REGEX.test(trimmed)) emails.push(trimmed);
+    if (trimmed && EMAIL_REGEX.test(trimmed)) emails = [...emails, trimmed];
+    const originalCount = emails.length;
+    const seen = new Set<string>();
+    emails = emails.filter((e) => {
+      const key = e.trim().toLowerCase();
+      if (existingSet.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const duplicateCount = originalCount - emails.length;
+    if (duplicateCount > 0) {
+      showDuplicateMessage(
+        duplicateCount === 1
+          ? "1 email is already in the list and was skipped."
+          : `${duplicateCount} emails are already in the list and were skipped.`
+      );
+    }
     if (emails.length === 0) return;
     onSubmit?.(emails);
     await submitAddUsersByEmail(emails);
     setChips([]);
     setInputValue("");
-  }, [chips, inputValue, onSubmit]);
+  }, [chips, inputValue, existingEmails, onSubmit, showDuplicateMessage]);
 
   return (
     <div
       className={className}
       style={{
         display: "flex",
-        alignItems: "center",
+        flexDirection: "column",
         gap: "12px",
-        flexWrap: "wrap",
+        width: "100%",
       }}
     >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          flexWrap: "wrap",
+        }}
+      >
       <div
         ref={containerRef}
         style={{ flex: 1, minWidth: "280px", position: "relative" }}
@@ -238,6 +288,22 @@ const AddUsersByEmail: React.FC<AddUsersByEmailProps> = ({
       >
         Add Users ({chips.length + (inputValue.trim() ? 1 : 0)})
       </button>
+      </div>
+      {duplicateMessage && (
+        <div
+          role="alert"
+          style={{
+            fontSize: "13px",
+            color: "#b45309",
+            backgroundColor: "#fffbeb",
+            border: "1px solid #fcd34d",
+            borderRadius: "6px",
+            padding: "8px 12px",
+          }}
+        >
+          {duplicateMessage}
+        </div>
+      )}
     </div>
   );
 };

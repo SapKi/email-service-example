@@ -25,7 +25,7 @@ const initialUsers: UserRow[] = [
     userName: "Brooklyn Simmons",
     email: "email@example.long.com",
     status: "Active",
-    addedOn: "July 10, 2026",
+    addedOn: "Feb 16, 2026",
     role: "Admin",
   },
   {
@@ -33,7 +33,7 @@ const initialUsers: UserRow[] = [
     userName: "Jane Doe",
     email: "jane@example.com",
     status: "Active",
-    addedOn: "Aug 1, 2026",
+    addedOn: "Feb 16, 2026",
     role: "Member",
   },
 ];
@@ -53,22 +53,25 @@ function generateUserId(): string {
  * Renders the AddUsersByEmail component and demonstrates parent ↔ child communication.
  */
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"Users" | "Nav Item">("Users");
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
 
   const handleEmailsChange = useCallback((_emails: string[]) => {}, []);
 
   const handleSubmit = useCallback((emails: string[]) => {
     const addedOn = formatAddedOn();
-    const newRows: UserRow[] = emails.map((email) => ({
-      id: generateUserId(),
-      userName: email,
-      email,
-      status: "Active",
-      addedOn,
-      role: "Member",
-    }));
-    setUsers((prev) => [...prev, ...newRows]);
+    setUsers((prev) => {
+      const existingSet = new Set(prev.map((u) => u.email.trim().toLowerCase()));
+      const toAdd = emails.filter((e) => !existingSet.has(e.trim().toLowerCase()));
+      const newRows: UserRow[] = toAdd.map((email) => ({
+        id: generateUserId(),
+        userName: email,
+        email: email.trim().toLowerCase(),
+        status: "Active",
+        addedOn,
+        role: "Member",
+      }));
+      return [...prev, ...newRows];
+    });
   }, []);
 
   return (
@@ -126,56 +129,18 @@ const SettingsPage: React.FC = () => {
           Settings
         </h1>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "4px", marginBottom: "24px", borderBottom: "1px solid #e5e7eb" }}>
-          <button
-            type="button"
-            onClick={() => setActiveTab("Users")}
-            style={{
-              padding: "10px 16px",
-              border: "none",
-              borderBottom: activeTab === "Users" ? "2px solid #2563eb" : "2px solid transparent",
-              background: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: activeTab === "Users" ? "#2563eb" : "#6b7280",
-              cursor: "pointer",
-            }}
-          >
-            Users
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("Nav Item")}
-            style={{
-              padding: "10px 16px",
-              border: "none",
-              borderBottom: activeTab === "Nav Item" ? "2px solid #2563eb" : "2px solid transparent",
-              background: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: activeTab === "Nav Item" ? "#2563eb" : "#6b7280",
-              cursor: "pointer",
-            }}
-          >
-            Nav Item
-          </button>
-        </div>
-
-        {activeTab === "Users" && (
-          <>
-            {/* User table - scroll after 6 rows */}
-            <div
-              style={{
-                backgroundColor: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                marginBottom: "24px",
-                maxHeight: "340px",
-                overflowY: "auto",
-                overflowX: "hidden",
-              }}
-            >
+        {/* User table - scroll after 6 rows */}
+        <div
+          style={{
+            backgroundColor: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            marginBottom: "24px",
+            maxHeight: "340px",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
                 <thead style={{ position: "sticky", top: 0, zIndex: 1, backgroundColor: "#f9fafb", boxShadow: "0 1px 0 0 #e5e7eb" }}>
                   <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
@@ -266,22 +231,16 @@ const SettingsPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
+        </div>
 
-            {/* Email input area - the AddUsersByEmail component */}
-            <div style={{ backgroundColor: "#fff", padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
-              <AddUsersByEmail
-              existingEmails={users.map((u) => u.email)}
-              onEmailsChange={handleEmailsChange}
-              onSubmit={handleSubmit}
-            />
-            </div>
-          </>
-        )}
-
-        {activeTab === "Nav Item" && (
-          <div style={{ padding: "24px", color: "#6b7280" }}>Nav Item content (placeholder)</div>
-        )}
+        {/* Email input area - the AddUsersByEmail component */}
+        <div style={{ backgroundColor: "#fff", padding: "16px", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+          <AddUsersByEmail
+            existingEmails={users.map((u) => u.email)}
+            onEmailsChange={handleEmailsChange}
+            onSubmit={handleSubmit}
+          />
+        </div>
       </main>
     </div>
   );
