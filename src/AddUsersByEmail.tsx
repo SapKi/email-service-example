@@ -12,7 +12,7 @@ const INPUT_PADDING = 20;
 const MIN_INPUT_WIDTH = 80;
 const PLUS_N_RESERVE = 40;
 
-function getVisibleCount(chips: { id: string; email: string }[], containerWidth: number): number {
+const getVisibleCount = (chips: { id: string; email: string }[], containerWidth: number): number => {
   if (containerWidth <= 0) return chips.length;
   const baseReserve = containerWidth - INPUT_PADDING - MIN_INPUT_WIDTH;
   if (baseReserve <= 0) return 0;
@@ -33,11 +33,11 @@ function getVisibleCount(chips: { id: string; email: string }[], containerWidth:
     total += w;
   }
   return chips.length;
-}
+};
 
-function generateId(): string {
+const generateId = (): string => {
   return Math.random().toString(36).slice(2);
-}
+};
 
 export interface AddUsersByEmailProps extends AddUsersByEmailCallbacks {
   className?: string;
